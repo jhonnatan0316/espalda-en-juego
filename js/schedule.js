@@ -18,8 +18,14 @@ export const ACTIVIDADES = {
 
 // Días contados desde el partido principal (0 = día de partido).
 const SEMANA_UN_PARTIDO = ['partido', 'recuperar', 'pilates', 'fuerzaA', 'natacion', 'fuerzaB', 'caminarSuave'];
-// Con dos partidos, el segundo cae 3 días antes del principal (72 horas).
-const SEMANA_DOS_PARTIDOS = ['partido', 'recuperar', 'fuerzaA', 'natacion', 'partidoSuave', 'fuerzaB', 'pilatesSuave'];
+// Con dos partidos: una plantilla por cada separación (días del principal al segundo).
+// En todas, la fuerza nunca cae el día antes de un partido y sus dos sesiones no son seguidas.
+const SEMANAS_DOS_PARTIDOS = {
+  2: ['partido', 'recuperar', 'partidoSuave', 'fuerzaA', 'natacion', 'fuerzaB', 'pilatesSuave'],
+  3: ['partido', 'fuerzaA', 'natacion', 'partidoSuave', 'recuperar', 'fuerzaB', 'pilatesSuave'],
+  4: ['partido', 'recuperar', 'fuerzaA', 'natacion', 'partidoSuave', 'fuerzaB', 'pilatesSuave'],
+  5: ['partido', 'fuerzaA', 'natacion', 'fuerzaB', 'pilatesSuave', 'partidoSuave', 'caminarSuave'],
+};
 
 export const FASES = [
   { n: 1, nombre: 'Base', semanas: '1 a 4', desde: 1, hasta: 4,
@@ -93,10 +99,31 @@ export function dosPartidos(config) {
   return Boolean(config.segundoPartido && config.segundoPartido.activo);
 }
 
+/** Día de la semana del segundo partido. Sin indicar, 3 días antes del principal. */
+export function diaSegundo(config) {
+  const d = (config.segundoPartido || {}).dia;
+  return Number.isInteger(d) ? d : (config.partido.dia + 4) % 7;
+}
+
+/** Horas entre los dos partidos de la semana (la separación más corta), o null con uno solo. */
+export function horasEntrePartidos(config) {
+  if (!dosPartidos(config)) return null;
+  const min = (h) => { if (!h) return null; const [a, b] = h.split(':').map(Number); return a * 60 + b; };
+  const dias = (diaSegundo(config) - config.partido.dia + 7) % 7;
+  const h1 = min(config.partido.hora); const h2 = min(config.segundoPartido.hora);
+  const ida = dias * 24 + (h1 !== null && h2 !== null ? (h2 - h1) / 60 : 0);
+  return Math.round(Math.min(ida, 168 - ida));
+}
+
 /** Tipo de actividad para una fecha. */
 export function tipoDelDia(config, fecha) {
   const desde = (diaSemana(fecha) - config.partido.dia + 7) % 7;
-  return (dosPartidos(config) ? SEMANA_DOS_PARTIDOS : SEMANA_UN_PARTIDO)[desde];
+  if (!dosPartidos(config)) return SEMANA_UN_PARTIDO[desde];
+  const separacion = (diaSegundo(config) - config.partido.dia + 7) % 7;
+  const plantilla = SEMANAS_DOS_PARTIDOS[separacion];
+  if (plantilla) return plantilla[desde];
+  // Partidos en días seguidos: el plan no lo contempla; se marca el segundo y se deja el resto.
+  return desde === separacion ? 'partidoSuave' : SEMANA_UN_PARTIDO[desde];
 }
 
 export function esPartido(tipo) { return tipo === 'partido' || tipo === 'partidoSuave'; }

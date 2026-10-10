@@ -1,5 +1,5 @@
 import {
-  DIAS, ACTIVIDADES, FASES, planDelDia, tipoDelDia, esPartido, tocaRutina, dosPartidos,
+  DIAS, ACTIVIDADES, FASES, planDelDia, tipoDelDia, esPartido, tocaRutina, dosPartidos, diaSegundo, horasEntrePartidos,
   sumarDias, lunesDe, fechaLarga, diaSemana, diasEntre,
 } from './schedule.js';
 import {
@@ -160,7 +160,7 @@ function vistaSemana() {
       <p class="criterio">Para avanzar: ${esc(x.criterio)}</p>
     </li>`).join('');
 
-  const sin = semanasSinSintomas(config, f); const cumplidas = semanasCumplidas(f);
+  const sin = semanasSinSintomas(config, f); const cumplidas = semanasCumplidas(f); const horas = horasEntrePartidos(config);
   const cond = (ok, texto, detalle) => `<li class="cond ${ok === true ? 'si' : ok === false ? 'no' : ''}"><span class="marca" aria-hidden="true">${ok === true ? '✓' : ''}</span><div><strong>${texto}</strong><span>${detalle}</span></div></li>`;
   return `
     <header class="cabecera-dia"><h1 class="titular">Semana</h1><p>${textoFase(p)}</p></header>
@@ -175,12 +175,12 @@ function vistaSemana() {
     </section>
     <section class="bloque">
       <h2>Segundo día de fútbol</h2>
-      <p>${dosPartidos(config) ? 'El plan está configurado con dos partidos por semana.' : 'Se plantea desde la semana 13 y solo si se cumplen todas las condiciones.'}</p>
+      <p>${dosPartidos(config) ? 'El plan está configurado con dos partidos por semana. Estas son las condiciones que pedía antes de añadir el segundo; las que no se cumplen son riesgo asumido.' : 'Se plantea desde la semana 13 y solo si se cumplen todas las condiciones.'}</p>
       <ul class="conds">
         ${cond(p.semana >= 13, 'Las tres fases completadas', `Vas por la semana ${p.semana}; hace falta la 13`)}
         ${cond(sin >= 12, 'Doce semanas seguidas sin dolor irradiado, hormigueo ni pérdida de fuerza', `Llevas ${sin}, según lo registrado`)}
         ${cond(cumplidas === 4, 'Rutina hecha al menos 5 días por semana', `${cumplidas} de las últimas 4 semanas`)}
-        ${cond(null, 'Al menos 48 horas entre partidos, mejor 72', 'Depende del calendario de partidos')}
+        ${horas === null ? cond(null, 'Al menos 48 horas entre partidos, mejor 72', 'Depende del calendario de partidos') : cond(horas >= 48, 'Al menos 48 horas entre partidos, mejor 72', `Entre tus partidos hay ${horas} horas`)}
         ${cond(null, 'El segundo partido es el suave', 'Césped antes que pista, 45 a 60 minutos, sin competición')}
       </ul>
       <p class="nota">Se vuelve a un solo día si aparece una crisis o molestias irradiadas dos semanas seguidas. Más partidos son más giros y frenadas sobre los discos afectados; ningún estudio cuantifica ese riesgo.</p>
@@ -369,7 +369,7 @@ function vistaAjustes() {
       <dl class="datos">
         <dt>Inicio del plan</dt><dd>${fechaLarga(config.inicio)} de ${config.inicio.slice(0, 4)}</dd>
         <dt>Día de partido</dt><dd>${mayus(DIAS[config.partido.dia])}${config.partido.hora ? `, ${esc(config.partido.hora)}` : ''}</dd>
-        <dt>Segundo partido</dt><dd>${dosPartidos(config) ? mayus(DIAS[(config.partido.dia + 4) % 7]) : 'No'}</dd>
+        <dt>Segundo partido</dt><dd>${dosPartidos(config) ? `${mayus(DIAS[diaSegundo(config)])}${config.segundoPartido.hora ? `, ${esc(config.segundoPartido.hora)}` : ''}` : 'No'}</dd>
         <dt>Aviso de rutina</dt><dd>${esc(av.rutina || 'No')}</dd>
         <dt>Pausas de la silla</dt><dd>${esc((av.pausas || []).join(', ') || 'No')}</dd>
         <dt>Sesión del día</dt><dd>${esc(av.sesion || 'No')}</dd>

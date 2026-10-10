@@ -4,8 +4,8 @@
   "url": "https://jhonnatan0316.github.io/espalda-en-juego/",
   "zonaHoraria": "Europe/Madrid",
   "inicio": "2026-10-12",
-  "partido": { "dia": 6, "hora": null },
-  "segundoPartido": { "activo": false, "hora": null },
+  "partido": { "dia": 2, "hora": "20:00" },
+  "segundoPartido": { "activo": true, "dia": 4, "hora": "19:00" },
   "avisos": {
     "rutina": "08:30",
     "pausas": ["11:00", "13:00", "17:00"],

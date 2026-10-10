@@ -28,7 +28,9 @@ Para varios móviles, `PUSH_SUBSCRIPTIONS` admite una lista: `[{...}, {...}]`.
 | `inicio` | Primer día del plan (`AAAA-MM-DD`). De ahí salen la semana y la fase |
 | `partido.dia` | Día del partido principal: 0 domingo, 1 lunes … 6 sábado |
 | `partido.hora` | Hora del partido (`"18:00"`) para avisar de calentar 30 minutos antes, o `null` |
-| `segundoPartido.activo` | `true` para la semana con dos partidos; el segundo cae 3 días antes del principal |
+| `segundoPartido.activo` | `true` para la semana con dos partidos |
+| `segundoPartido.dia` | Día del segundo partido, el que se juega suave. Al menos dos días separado del principal |
+| `segundoPartido.hora` | Hora del segundo partido, o `null` |
 | `avisos.rutina` | Hora del aviso de la rutina diaria |
 | `avisos.pausas` | Horas de las pausas de la silla, de lunes a viernes |
 | `avisos.sesion` | Hora del aviso de la sesión del día |

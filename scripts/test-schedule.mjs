@@ -1,7 +1,7 @@
 // Comprobaciones de la lógica del plan y de los avisos. Uso: npm test
 import assert from 'node:assert/strict';
 import {
-  tipoDelDia, planDelDia, avisosDelDia, avisosEnVentana, instanteDe, fechaEnZona, faseDe, lunesDe, sumarDias,
+  tipoDelDia, planDelDia, avisosDelDia, avisosEnVentana, instanteDe, fechaEnZona, faseDe, lunesDe, sumarDias, horasEntrePartidos,
 } from '../js/schedule.js';
 
 const base = {
@@ -16,13 +16,30 @@ assert.deepEqual(semana(base), ['pilates', 'fuerzaA', 'natacion', 'fuerzaB', 'ca
 // Con dos partidos: miércoles suave y sábado.
 const dos = { ...base, segundoPartido: { activo: true, hora: null } };
 assert.deepEqual(semana(dos), ['fuerzaA', 'natacion', 'partidoSuave', 'fuerzaB', 'pilatesSuave', 'partido', 'recuperar']);
-// La fuerza nunca cae el día antes de un partido, con cualquier día de partido.
+// Martes a las 20:00 y jueves a las 19:00: 47 horas entre partidos.
+const marJue = { ...base, partido: { dia: 2, hora: '20:00' }, segundoPartido: { activo: true, dia: 4, hora: '19:00' } };
+assert.deepEqual(semana(marJue), ['pilatesSuave', 'partido', 'recuperar', 'partidoSuave', 'fuerzaA', 'natacion', 'fuerzaB']);
+assert.equal(horasEntrePartidos(marJue), 47);
+assert.equal(horasEntrePartidos(base), null);
+assert.equal(horasEntrePartidos(dos), 72);
+assert.deepEqual(avisosDelDia(marJue, '2026-10-13').map((a) => `${a.hora} ${a.tag}`), ['09:00 partido', '11:00 pausa', '13:00 pausa', '17:00 pausa', '19:30 calentar']);
+assert.deepEqual(avisosDelDia(marJue, '2026-10-15').map((a) => `${a.hora} ${a.tag}`), ['09:00 partido', '11:00 pausa', '13:00 pausa', '17:00 pausa', '18:30 calentar']);
+
+// Con cualquier día de partido y cualquier separación válida: la fuerza nunca cae el día antes
+// de un partido, sus dos sesiones no son seguidas y hay dos sesiones por semana.
 for (let dia = 0; dia < 7; dia++) {
-  for (const c of [{ ...base, partido: { dia, hora: null } }, { ...dos, partido: { dia, hora: null } }]) {
-    const s = [...Array(14)].map((_, i) => tipoDelDia(c, sumarDias('2026-10-12', i)));
-    s.forEach((t, i) => { if (t.startsWith('fuerza') && s[i + 1]) assert.ok(!s[i + 1].startsWith('partido'), `fuerza antes de partido (día ${dia})`); });
+  const casos = [{ ...base, partido: { dia, hora: null } }];
+  for (const sep of [2, 3, 4, 5]) casos.push({ ...base, partido: { dia, hora: null }, segundoPartido: { activo: true, dia: (dia + sep) % 7, hora: null } });
+  for (const c of casos) {
+    const s = [...Array(15)].map((_, i) => tipoDelDia(c, sumarDias('2026-10-12', i)));
+    s.slice(0, 14).forEach((t, i) => {
+      if (!t.startsWith('fuerza')) return;
+      assert.ok(!s[i + 1].startsWith('partido'), 'fuerza el día antes de un partido');
+      assert.ok(!s[i + 1].startsWith('fuerza'), 'dos sesiones de fuerza seguidas');
+    });
+    assert.equal(s.slice(0, 7).filter((t) => t.startsWith('fuerza')).length, 2);
     const partidos = s.map((t, i) => (t.startsWith('partido') ? i : -1)).filter((i) => i >= 0);
-    partidos.slice(1).forEach((p, i) => assert.ok(p - partidos[i] >= 3, 'menos de 72 h entre partidos'));
+    partidos.slice(1).forEach((p, i) => assert.ok(p - partidos[i] >= 2, 'partidos en días seguidos'));
   }
 }
 
