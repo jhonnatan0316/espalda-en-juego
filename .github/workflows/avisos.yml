@@ -1,0 +1,58 @@
+name: Avisos
+
+on:
+  schedule:
+    # Cada 10 minutos. GitHub puede retrasar la ejecución unos minutos.
+    - cron: '4,14,24,34,44,54 * * * *'
+  workflow_dispatch:
+    inputs:
+      prueba:
+        description: Enviar un aviso de prueba al móvil
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: avisos
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Calcular la ventana de envío
+        id: ventana
+        run: |
+          hasta=$(gh run view "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --json createdAt -q .createdAt)
+          desde=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow avisos.yml --event schedule --status success --limit 1 --json createdAt -q '.[0].createdAt // empty')
+          echo "hasta=$hasta" >> "$GITHUB_OUTPUT"
+          echo "desde=$desde" >> "$GITHUB_OUTPUT"
+
+      - name: Enviar avisos
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
+          DESDE: ${{ steps.ventana.outputs.desde }}
+          HASTA: ${{ steps.ventana.outputs.hasta }}
+          PRUEBA: ${{ github.event_name == 'workflow_dispatch' && inputs.prueba }}
+        run: node scripts/send-push.mjs
+
+      # GitHub desactiva las tareas programadas tras 60 días sin actividad en el repositorio.
+      - name: Mantener activa la tarea programada
+        if: github.event_name == 'schedule'
+        continue-on-error: true
+        run: |
+          if [ "$(date -u +%u%H)" = "103" ]; then
+            gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/avisos.yml/enable"
+          fi

@@ -1,0 +1,17 @@
+{
+  "nombre": "Espalda en juego",
+  "repositorio": "jhonnatan0316/espalda-en-juego",
+  "url": "https://jhonnatan0316.github.io/espalda-en-juego/",
+  "zonaHoraria": "Europe/Madrid",
+  "inicio": "2026-10-12",
+  "partido": { "dia": 6, "hora": null },
+  "segundoPartido": { "activo": false, "hora": null },
+  "avisos": {
+    "rutina": "08:30",
+    "pausas": ["11:00", "13:00", "17:00"],
+    "sesion": "18:30",
+    "partido": "09:00",
+    "registro": "20:00"
+  },
+  "vapidPublicKey": "BCes5fN0GpidBUirJHzIhmkmMrgPpTlenQb7_LDQlLMvV0zdAABm5O3mxJNPfqBO3ecyZuIbdKjCqwPrQ6dREY4"
+}

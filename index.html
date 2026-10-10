@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Espalda en juego</title>
+  <meta name="description" content="Plan de ejercicios de espalda para seguir jugando al fútbol: rutina diaria, fuerza, día de partido y avisos.">
+  <meta name="theme-color" content="#17603F" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0C2219" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="salto" href="#app">Saltar al contenido</a>
+  <div class="barra">
+    <a class="marca-app" href="#/hoy">Espalda en juego</a>
+    <a class="ajustes" href="#/ajustes" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </a>
+  </div>
+
+  <main id="app" tabindex="-1"><p class="cargando">Cargando el plan…</p></main>
+
+  <nav aria-label="Secciones">
+    <a href="#/hoy" data-ruta="hoy">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M2 12h20"/></svg>Hoy</a>
+    <a href="#/semana" data-ruta="semana">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="1"/><path d="M3 10h18M9 5v15M15 5v15"/></svg>Semana</a>
+    <a href="#/ejercicios" data-ruta="ejercicios">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6M6 6v12M18 6v12M21 9v6M6 12h12"/></svg>Ejercicios</a>
+    <a href="#/registro" data-ruta="registro">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Registro</a>
+    <a href="#/crisis" data-ruta="crisis" class="nav-crisis">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="1.5"/></svg>Crisis</a>
+  </nav>
+
+  <div id="player" hidden></div>
+  <div id="toast" role="status" hidden></div>
+  <noscript><p style="padding:24px">Esta web necesita JavaScript para mostrar el plan del día.</p></noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

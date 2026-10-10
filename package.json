@@ -1,0 +1,13 @@
+{
+  "name": "espalda-en-juego",
+  "private": true,
+  "type": "module",
+  "description": "Web instalable con el plan de ejercicios de espalda y sus avisos.",
+  "scripts": {
+    "test": "node scripts/test-schedule.mjs",
+    "avisos": "node scripts/send-push.mjs"
+  },
+  "dependencies": {
+    "web-push": "3.6.7"
+  }
+}
