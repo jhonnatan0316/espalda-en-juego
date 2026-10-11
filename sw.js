@@ -1,8 +1,8 @@
-// Service worker: uso sin conexión y avisos push.
-const CACHE = 'eej-v4';
+// Service worker: uso sin conexión.
+const CACHE = 'eej-v5';
 const BASE = [
   './', 'index.html', 'css/styles.css', 'manifest.webmanifest', 'config.json',
-  'js/app.js', 'js/data.js', 'js/schedule.js', 'js/store.js', 'js/player.js', 'js/figuras.js',
+  'js/app.js', 'js/data.js', 'js/schedule.js', 'js/store.js', 'js/player.js', 'js/figuras.js', 'js/recordatorios.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/badge.png',
 ];
 
@@ -43,31 +43,6 @@ self.addEventListener('fetch', (ev) => {
     caches.match(req, { ignoreSearch: true }).then((hit) => {
       const red = fetch(req).then(guardar).catch(() => hit);
       return hit || red;
-    }),
-  );
-});
-
-self.addEventListener('push', (ev) => {
-  let d = {};
-  try { d = ev.data ? ev.data.json() : {}; } catch { d = { cuerpo: ev.data ? ev.data.text() : '' }; }
-  ev.waitUntil(self.registration.showNotification(d.titulo || 'Espalda en juego', {
-    body: d.cuerpo || '',
-    tag: d.tag || 'aviso',
-    renotify: true,
-    icon: 'icons/icon-192.png',
-    badge: 'icons/badge.png',
-    data: { url: d.url || '#/hoy' },
-  }));
-});
-
-self.addEventListener('notificationclick', (ev) => {
-  ev.notification.close();
-  const destino = new URL(ev.notification.data?.url || '#/hoy', self.registration.scope).href;
-  ev.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
-      const abierta = ventanas.find((v) => v.url.startsWith(self.registration.scope));
-      if (abierta) return abierta.navigate(destino).then((v) => (v || abierta).focus());
-      return self.clients.openWindow(destino);
     }),
   );
 });

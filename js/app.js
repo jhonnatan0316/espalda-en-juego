@@ -9,6 +9,7 @@ import {
 import { store, rutinasSemana, semanasSinSintomas, semanasCumplidas } from './store.js';
 import { abrirPlayer, minutosDe } from './player.js';
 import { FIGURAS, svgFigura } from './figuras.js';
+import { recordatoriosSemanales, textoDias, enlaceGoogle, ics } from './recordatorios.js';
 
 const app = document.getElementById('app');
 let config = null;
@@ -130,14 +131,14 @@ function vistaHoy() {
       <h1 class="titular">${mayus(DIAS[diaSemana(f)])}</h1>
       <p>${fechaLarga(f)}. ${textoFase(p)}</p>
     </header>
-    ${instalar ? '<p class="nota">Para recibir avisos, instala la web en el móvil. <button class="btn-texto" data-a="instalar">Instalar</button></p>' : ''}
+    ${instalar ? '<p class="nota">Instala la web en el móvil para abrirla como una app. <button class="btn-texto" data-a="instalar">Instalar</button></p>' : ''}
     ${tarjetasSintoma(f)}
     <section class="bloque">
       <h2>Hoy toca</h2>
       <ul class="tareas">${filas.join('')}</ul>
       ${notaFase}
     </section>
-    <p class="pie-enlace"><a href="#/semana">Ver la semana completa</a></p>`;
+    <p class="pie-enlace"><a href="#/semana">Ver la semana completa</a><a href="#/recordatorios">Poner recordatorios en el móvil</a></p>`;
 }
 
 function vistaSemana() {
@@ -359,39 +360,26 @@ function vistaCrisis() {
 
 function vistaAjustes() {
   const a = store.ajustes(); const av = config.avisos || {};
-  const soporta = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-  const permiso = soporta ? Notification.permission : 'no';
   const repo = config.repositorio;
-  let avisos;
-  if (!soporta) avisos = '<p>Este navegador no admite avisos. En Android, abre la web con Chrome e instálala.</p>';
-  else if (permiso === 'denied') avisos = '<p>Los avisos están bloqueados para esta web. Se desbloquean en los ajustes del navegador, en Permisos del sitio.</p>';
-  else if (a.suscripcion) {
-    avisos = `
-      <p>Avisos activados en este móvil. Para que lleguen, este texto tiene que estar guardado en GitHub como secreto <code>PUSH_SUBSCRIPTIONS</code>.</p>
-      <textarea class="codigo" id="suscripcion" readonly rows="5">${esc(a.suscripcion)}</textarea>
-      <div class="fila-btn"><button class="btn" data-a="copiar">Copiar el texto</button>
-      <a class="btn btn-borde" target="_blank" rel="noopener" href="https://github.com/${esc(repo)}/settings/secrets/actions">Abrir secretos en GitHub</a></div>
-      <button class="btn-texto" data-a="probar">Probar un aviso en este móvil</button>`;
-  } else {
-    avisos = `<p>Recibe en el móvil los recordatorios de la rutina, las pausas de la silla, la sesión del día y el partido.</p>
-      <button class="btn" data-a="activar-avisos">Activar avisos</button>`;
-  }
   return `
     <header class="cabecera-dia"><h1 class="titular">Ajustes</h1></header>
-    ${instalar ? '<section class="bloque"><h2>Instalar</h2><p>Instalada en la pantalla de inicio se abre como una app y puede recibir avisos.</p><button class="btn" data-a="instalar">Instalar en este móvil</button></section>' : ''}
-    <section class="bloque"><h2>Avisos</h2>${avisos}</section>
+    ${instalar ? '<section class="bloque"><h2>Instalar</h2><p>Instalada en la pantalla de inicio se abre como una app y funciona sin conexión.</p><button class="btn" data-a="instalar">Instalar en este móvil</button></section>' : ''}
+    <section class="bloque">
+      <h2>Recordatorios</h2>
+      <p>Los avisos los da el calendario del móvil, a su hora y sin depender de internet. Se añaden una vez y se repiten cada semana.</p>
+      <a class="btn" href="#/recordatorios">Poner recordatorios</a>
+    </section>
     <section class="bloque">
       <h2>Plan configurado</h2>
       <dl class="datos">
         <dt>Inicio del plan</dt><dd>${fechaLarga(config.inicio)} de ${config.inicio.slice(0, 4)}</dd>
         <dt>Día de partido</dt><dd>${mayus(DIAS[config.partido.dia])}${config.partido.hora ? `, ${esc(config.partido.hora)}` : ''}</dd>
         <dt>Segundo partido</dt><dd>${dosPartidos(config) ? `${mayus(DIAS[diaSegundo(config)])}${config.segundoPartido.hora ? `, ${esc(config.segundoPartido.hora)}` : ''}` : 'No'}</dd>
-        <dt>Aviso de rutina</dt><dd>${esc(av.rutina || 'No')}</dd>
+        <dt>Hora de la rutina</dt><dd>${esc(av.rutina || 'No')}</dd>
         <dt>Pausas de la silla</dt><dd>${esc((av.pausas || []).join(', ') || 'No')}</dd>
         <dt>Sesión del día</dt><dd>${esc(av.sesion || 'No')}</dd>
-        <dt>Zona horaria</dt><dd>${esc(config.zonaHoraria)}</dd>
       </dl>
-      <p class="nota">Estos datos están en el archivo config.json del repositorio. Al cambiarlo, cambian la web y los avisos.</p>
+      <p class="nota">Estos datos están en el archivo config.json del repositorio. Si cambias días u horas, borra los recordatorios antiguos del calendario y añade los nuevos.</p>
       <a class="btn btn-borde" target="_blank" rel="noopener" href="https://github.com/${esc(repo)}/edit/main/config.json">Editar en GitHub</a>
     </section>
     <section class="bloque">
@@ -415,9 +403,40 @@ function vistaAjustes() {
     </section>`;
 }
 
+function vistaRecordatorios() {
+  const lista = recordatoriosSemanales(config, hoy()); const puestos = store.ajustes().recordatorios || {};
+  const filas = lista.map((r) => `
+    <li class="recordatorio ${puestos[r.clave] ? 'puesto' : ''}">
+      <div><strong>${esc(r.titulo)}</strong><span>${mayus(textoDias(r.dias))}, a las ${esc(r.hora)}</span></div>
+      <a class="btn btn-peq ${puestos[r.clave] ? 'btn-borde' : ''}" data-a="recordado" data-v="${esc(r.clave)}" target="_blank" rel="noopener"
+        href="${esc(enlaceGoogle(r, config.url))}">${puestos[r.clave] ? 'Añadido' : 'Añadir'}</a>
+    </li>`).join('');
+  return `
+    <p class="volver"><a href="#/ajustes">Ajustes</a></p>
+    <header class="cabecera-dia"><h1 class="titular titular-peq">Recordatorios</h1>
+      <p>El calendario del móvil avisa a la hora, cada semana, aunque la web esté cerrada. Se ponen una sola vez.</p></header>
+    <section class="bloque">
+      <h2>Todos de una vez</h2>
+      <p>Descarga el archivo y ábrelo con el calendario. Trae los ${lista.length} recordatorios con su aviso a la hora exacta.</p>
+      <button class="btn" data-a="ics">Descargar los ${lista.length} recordatorios</button>
+      <p class="nota">Si el calendario del móvil no lo abre, impórtalo desde calendar.google.com en un ordenador: Configuración, Importar y exportar.</p>
+    </section>
+    <section class="bloque">
+      <h2>Uno a uno</h2>
+      <p>Cada botón abre Google Calendar con el evento ya relleno y repetido cada semana. Solo hay que guardar.</p>
+      <ul class="recordatorios">${filas}</ul>
+      <p class="nota">Antes de guardar, revisa la notificación del evento: para que suene a la hora, elige «A la hora del evento».</p>
+    </section>
+    <section class="bloque">
+      <h2>Si prefieres la alarma del reloj</h2>
+      <p>Una web no puede crear alarmas en la app Reloj de Android; hay que ponerlas a mano. Estas son las horas:</p>
+      <ul class="lista">${lista.map((r) => `<li>${esc(r.hora)}, ${textoDias(r.dias)}: ${esc(r.titulo)}</li>`).join('')}</ul>
+    </section>`;
+}
+
 /* ---------- Navegación ---------- */
 
-const RUTAS = { hoy: vistaHoy, semana: vistaSemana, ejercicios: vistaEjercicios, partido: vistaPartido, registro: vistaRegistro, crisis: vistaCrisis, ajustes: vistaAjustes };
+const RUTAS = { hoy: vistaHoy, semana: vistaSemana, ejercicios: vistaEjercicios, partido: vistaPartido, registro: vistaRegistro, crisis: vistaCrisis, ajustes: vistaAjustes, recordatorios: vistaRecordatorios };
 
 function pintar(mantenerScroll = false) {
   const [, ruta = 'hoy', arg] = location.hash.split('/');
@@ -466,31 +485,6 @@ function abrirVisor(id, indice) {
   visor.querySelector('.visor-cerrar').focus();
 }
 
-/* ---------- Avisos ---------- */
-
-function claveBinaria(base64) {
-  const b = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
-  return Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
-}
-
-async function activarAvisos() {
-  try {
-    const permiso = await Notification.requestPermission();
-    if (permiso !== 'granted') { aviso('Sin permiso no se pueden enviar avisos.'); return pintar(true); }
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveBinaria(config.vapidPublicKey) });
-    store.ajustes({ suscripcion: JSON.stringify(sub) });
-    pintar(true);
-  } catch (e) {
-    aviso('No se pudieron activar los avisos. Prueba con la web instalada y conexión.');
-  }
-}
-
-async function probarAviso() {
-  const reg = await navigator.serviceWorker.ready;
-  reg.showNotification('Aviso de prueba', { body: 'Así llegarán los recordatorios de Espalda en juego.', icon: 'icons/icon-192.png', badge: 'icons/badge.png' });
-}
-
 /* ---------- Acciones ---------- */
 
 const ACCIONES = {
@@ -507,11 +501,13 @@ const ACCIONES = {
   'crisis-on'() { store.iniciarCrisis(hoy(), document.getElementById('desencadenante').value.trim()); location.hash = '#/hoy'; pintar(); },
   'crisis-off'() { if (confirmar(this)) { store.terminarCrisis(hoy()); aviso('Crisis guardada en el registro.'); pintar(); } },
   sonido(b) { store.ajustes({ sonido: b.checked }); },
-  'activar-avisos': activarAvisos,
-  probar: probarAviso,
-  async copiar() {
-    const t = document.getElementById('suscripcion');
-    try { await navigator.clipboard.writeText(t.value); aviso('Texto copiado.'); } catch { t.select(); aviso('Selecciona y copia el texto a mano.'); }
+  recordado(b) { store.ajustes({ recordatorios: { ...(store.ajustes().recordatorios || {}), [b.dataset.v]: true } }); setTimeout(() => pintar(true), 600); },
+  ics() {
+    const lista = recordatoriosSemanales(config, hoy());
+    const url = URL.createObjectURL(new Blob([ics(lista, config.url)], { type: 'text/calendar' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'espalda-en-juego-recordatorios.ics' });
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+    aviso('Archivo descargado. Ábrelo con el calendario.');
   },
   async instalar() { if (!instalar) return; instalar.prompt(); await instalar.userChoice; instalar = null; pintar(true); },
   exportar() {

@@ -1,11 +1,10 @@
-// Comprobaciones de la lógica del plan y de los avisos. Uso: npm test
+// Comprobaciones de la lógica del plan y de los recordatorios. Uso: npm test
 import assert from 'node:assert/strict';
-import {
-  tipoDelDia, planDelDia, avisosDelDia, avisosEnVentana, instanteDe, fechaEnZona, faseDe, lunesDe, sumarDias, horasEntrePartidos,
-} from '../js/schedule.js';
+import { tipoDelDia, planDelDia, recordatoriosDelDia, faseDe, lunesDe, sumarDias, horasEntrePartidos } from '../js/schedule.js';
+import { recordatoriosSemanales, textoDias, enlaceGoogle, ics } from '../js/recordatorios.js';
 
 const base = {
-  zonaHoraria: 'Europe/Madrid', inicio: '2026-10-12',
+  url: 'https://ejemplo.test/app/', inicio: '2026-10-12',
   partido: { dia: 6, hora: null }, segundoPartido: { activo: false, hora: null },
   avisos: { rutina: '08:30', pausas: ['11:00', '13:00', '17:00'], sesion: '18:30', partido: '09:00', registro: '20:00' },
 };
@@ -13,7 +12,7 @@ const semana = (c) => [0, 1, 2, 3, 4, 5, 6].map((i) => tipoDelDia(c, sumarDias('
 
 // Semana tipo con un partido el sábado (lunes a domingo), como en el plan.
 assert.deepEqual(semana(base), ['pilates', 'fuerzaA', 'natacion', 'fuerzaB', 'caminarSuave', 'partido', 'recuperar']);
-// Con dos partidos: miércoles suave y sábado.
+// Con dos partidos sin indicar día: miércoles suave y sábado.
 const dos = { ...base, segundoPartido: { activo: true, hora: null } };
 assert.deepEqual(semana(dos), ['fuerzaA', 'natacion', 'partidoSuave', 'fuerzaB', 'pilatesSuave', 'partido', 'recuperar']);
 // Martes a las 20:00 y jueves a las 19:00: 47 horas entre partidos.
@@ -22,8 +21,6 @@ assert.deepEqual(semana(marJue), ['pilatesSuave', 'partido', 'recuperar', 'parti
 assert.equal(horasEntrePartidos(marJue), 47);
 assert.equal(horasEntrePartidos(base), null);
 assert.equal(horasEntrePartidos(dos), 72);
-assert.deepEqual(avisosDelDia(marJue, '2026-10-13').map((a) => `${a.hora} ${a.tag}`), ['09:00 partido', '11:00 pausa', '13:00 pausa', '17:00 pausa', '19:30 calentar']);
-assert.deepEqual(avisosDelDia(marJue, '2026-10-15').map((a) => `${a.hora} ${a.tag}`), ['09:00 partido', '11:00 pausa', '13:00 pausa', '17:00 pausa', '18:30 calentar']);
 
 // Con cualquier día de partido y cualquier separación válida: la fuerza nunca cae el día antes
 // de un partido, sus dos sesiones no son seguidas y hay dos sesiones por semana.
@@ -57,29 +54,47 @@ assert.equal(planDelDia(base, '2026-10-17').rutina, false);
 assert.equal(planDelDia(base, '2026-10-18').rutina, false);
 assert.equal(planDelDia(base, '2026-10-13').rutina, true);
 
-// Avisos de un martes: rutina, tres pausas y la sesión.
-assert.deepEqual(avisosDelDia(base, '2026-10-13').map((a) => `${a.hora} ${a.tag}`),
-  ['08:30 rutina', '11:00 pausa', '13:00 pausa', '17:00 pausa', '18:30 sesion']);
-// Sábado de partido con hora: aviso de mañana y de calentar 30 minutos antes.
-const conHora = { ...base, partido: { dia: 6, hora: '17:00' } };
-assert.deepEqual(avisosDelDia(conHora, '2026-10-17').map((a) => `${a.hora} ${a.tag}`), ['09:00 partido', '16:30 calentar']);
-// Domingo: paseo de recuperación y registro. Antes del inicio: nada.
-assert.deepEqual(avisosDelDia(base, '2026-10-18').map((a) => a.tag), ['sesion', 'registro']);
-assert.deepEqual(avisosDelDia(base, '2026-10-09'), []);
+// Recordatorios de un día.
+const delDia = (c, f) => recordatoriosDelDia(c, f).map((r) => `${r.hora} ${r.clave}`);
+assert.deepEqual(delDia(base, '2026-10-13'), ['08:30 rutina', '11:00 pausa-11:00', '13:00 pausa-13:00', '17:00 pausa-17:00', '18:30 sesion-fuerzaA']);
+assert.deepEqual(delDia(base, '2026-10-17'), ['09:00 partido-partido']); // sin hora de partido: aviso de la mañana
+assert.deepEqual(delDia(marJue, '2026-10-13'), ['11:00 pausa-11:00', '13:00 pausa-13:00', '17:00 pausa-17:00', '19:30 calentar-partido']);
+assert.deepEqual(delDia(marJue, '2026-10-15'), ['11:00 pausa-11:00', '13:00 pausa-13:00', '17:00 pausa-17:00', '18:30 calentar-partidoSuave']);
+assert.deepEqual(delDia(base, '2026-10-18'), ['18:30 sesion-recuperar', '20:00 registro']);
 
-// Zona horaria: horario de verano e invierno en Madrid, y Bogotá.
-assert.equal(new Date(instanteDe('2026-10-13', '08:30', 'Europe/Madrid')).toISOString(), '2026-10-13T06:30:00.000Z');
-assert.equal(new Date(instanteDe('2026-11-03', '08:30', 'Europe/Madrid')).toISOString(), '2026-11-03T07:30:00.000Z');
-assert.equal(new Date(instanteDe('2027-02-02', '08:30', 'America/Bogota')).toISOString(), '2027-02-02T13:30:00.000Z');
-assert.deepEqual(fechaEnZona(new Date('2026-10-13T22:30:00Z'), 'Europe/Madrid'), { fecha: '2026-10-14', hora: '00:30' });
+// Recordatorios de la semana, agrupados por días.
+const lista = recordatoriosSemanales(marJue, '2026-10-11');
+const de = (clave) => lista.find((r) => r.clave === clave);
+assert.equal(lista.length, 12);
+assert.deepEqual(de('rutina').dias, [1, 5, 6, 0]);           // lunes, viernes, sábado y domingo
+assert.equal(de('rutina').primera, '2026-10-12');             // no empieza antes del inicio del plan
+assert.deepEqual(de('pausa-11:00').dias, [1, 2, 3, 4, 5]);
+assert.deepEqual(de('calentar-partido').dias, [2]);
+assert.equal(de('calentar-partido').primera, '2026-10-13');
+assert.deepEqual(de('sesion-fuerzaB').dias, [0]);
+assert.equal(textoDias([1, 5, 6, 0]), 'lunes, viernes, sábado y domingo');
+assert.equal(textoDias([1, 2, 3, 4, 5]), 'de lunes a viernes');
+assert.equal(textoDias([2]), 'martes');
+// Pasada la fecha de inicio, la primera fecha es el siguiente día que toca, nunca en el pasado.
+assert.equal(de('rutina').primera <= '2026-10-18', true);
+assert.equal(recordatoriosSemanales(marJue, '2026-11-04').find((r) => r.clave === 'calentar-partido').primera, '2026-11-10');
 
-// Ventanas contiguas: cada aviso sale exactamente una vez a lo largo de una semana.
-const t0 = Date.parse('2026-10-11T22:00:00Z'); let enviados = 0;
-for (let t = t0; t < t0 + 7 * 86400000; t += 10 * 60000) enviados += avisosEnVentana(base, t, t + 10 * 60000).length;
-const esperados = [0, 1, 2, 3, 4, 5, 6].reduce((n, i) => n + avisosDelDia(base, sumarDias('2026-10-12', i)).length, 0);
-assert.equal(enviados, esperados);
-// Una ventana que cruza la medianoche local recoge avisos de los dos días.
-const cruza = avisosEnVentana({ ...base, avisos: { rutina: '00:10', registro: '23:50' } }, Date.parse('2026-10-18T21:45:00Z'), Date.parse('2026-10-18T22:15:00Z'));
-assert.deepEqual(cruza.map((a) => a.tag), ['registro', 'rutina']);
+// Enlace de Google Calendar: hora local, sin zona, repetición semanal.
+const enlace = new URL(enlaceGoogle(de('rutina'), marJue.url));
+assert.equal(enlace.origin + enlace.pathname, 'https://calendar.google.com/calendar/render');
+assert.equal(enlace.searchParams.get('dates'), '20261012T083000/20261012T084500');
+assert.equal(enlace.searchParams.get('recur'), 'RRULE:FREQ=WEEKLY;BYDAY=MO,FR,SA,SU');
+assert.equal(enlace.searchParams.get('text'), 'Rutina diaria');
+assert.ok(enlace.searchParams.get('details').endsWith('https://ejemplo.test/app/#/hoy'));
 
-console.log(`Todo correcto: ${esperados} avisos en la primera semana.`);
+// Archivo .ics: un evento por recordatorio, líneas de 75 octetos como mucho, aviso a la hora.
+const archivo = ics(lista, marJue.url, new Date('2026-10-11T10:00:00Z'));
+assert.equal((archivo.match(/BEGIN:VEVENT/g) || []).length, 12);
+assert.equal((archivo.match(/TRIGGER:PT0M/g) || []).length, 12);
+assert.ok(archivo.startsWith('BEGIN:VCALENDAR\r\n') && archivo.endsWith('END:VCALENDAR\r\n'));
+assert.ok(archivo.includes('DTSTART:20261013T193000\r\nDTEND:20261013T200000\r\nRRULE:FREQ=WEEKLY;BYDAY=TU'));
+for (const l of archivo.split('\r\n')) assert.ok(new TextEncoder().encode(l).length <= 75, `línea larga: ${l}`);
+assert.equal(new Set(archivo.match(/UID:.*/g)).size, 12);
+assert.ok(!/DESCRIPTION:[^\r]*[^\\],/.test(archivo.replace(/\r\n /g, '')), 'coma sin escapar');
+
+console.log(`Todo correcto: ${lista.length} recordatorios semanales.`);

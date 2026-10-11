@@ -68,33 +68,6 @@ export function fechaLarga(fecha) {
   return `${d} de ${MESES[m - 1]}`;
 }
 
-/** Fecha local 'YYYY-MM-DD' y hora 'HH:MM' de un instante en una zona horaria. */
-export function fechaEnZona(instante, zona) {
-  const f = new Intl.DateTimeFormat('en-CA', {
-    timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).formatToParts(instante);
-  const g = (t) => f.find((p) => p.type === t).value;
-  return { fecha: `${g('year')}-${g('month')}-${g('day')}`, hora: `${g('hour')}:${g('minute')}` };
-}
-
-/** Instante (ms) de una fecha y hora locales en una zona horaria. */
-export function instanteDe(fecha, hora, zona) {
-  const [y, m, d] = fecha.split('-').map(Number);
-  const [hh, mm] = hora.split(':').map(Number);
-  const objetivo = Date.UTC(y, m - 1, d, hh, mm);
-  let t = objetivo;
-  for (let i = 0; i < 3; i++) {
-    const loc = fechaEnZona(new Date(t), zona);
-    const [ly, lm, ld] = loc.fecha.split('-').map(Number);
-    const [lh, lmi] = loc.hora.split(':').map(Number);
-    const dif = objetivo - Date.UTC(ly, lm - 1, ld, lh, lmi);
-    if (dif === 0) break;
-    t += dif;
-  }
-  return t;
-}
-
 export function dosPartidos(config) {
   return Boolean(config.segundoPartido && config.segundoPartido.activo);
 }
@@ -155,56 +128,38 @@ function restarMinutos(hora, min) {
   return `${pad(Math.floor(t / 60))}:${pad(t % 60)}`;
 }
 
-/** Avisos de una fecha: [{ hora, titulo, cuerpo, url, tag }] ordenados por hora. */
-export function avisosDelDia(config, fecha) {
+/** Recordatorios de una fecha: [{ clave, hora, min, titulo, cuerpo, url }] ordenados por hora. */
+export function recordatoriosDelDia(config, fecha) {
   const p = planDelDia(config, fecha);
   const a = config.avisos || {};
   const out = [];
-  if (p.semana === 0) return out;
   if (p.rutina && a.rutina) {
-    out.push({ hora: a.rutina, tag: 'rutina', url: '#/hoy', titulo: 'Rutina diaria',
+    out.push({ clave: 'rutina', hora: a.rutina, min: 15, url: '#/hoy', titulo: 'Rutina diaria',
       cuerpo: 'Unos 15 minutos: curl-up, plancha lateral, bird-dog, puente y estiramiento.' });
   }
   if (p.laborable && Array.isArray(a.pausas)) {
     for (const h of a.pausas) {
-      out.push({ hora: h, tag: 'pausa', url: '#/hoy', titulo: 'Pausa de la silla',
+      out.push({ clave: `pausa-${h}`, hora: h, min: 5, url: '#/hoy', titulo: 'Pausa de la silla',
         cuerpo: 'Levántate y camina 2 o 3 minutos.' });
     }
   }
   if (esPartido(p.tipo)) {
-    if (a.partido) {
-      out.push({ hora: a.partido, tag: 'partido', url: '#/partido', titulo: `Hoy hay ${p.actividad.titulo.toLowerCase()}`,
-        cuerpo: 'Reserva 20 minutos para el calentamiento completo. Con dolor irradiado u hormigueo no se juega.' });
-    }
     const horaPartido = p.tipo === 'partido' ? config.partido.hora : (config.segundoPartido || {}).hora;
     if (horaPartido) {
-      out.push({ hora: restarMinutos(horaPartido, 30), tag: 'calentar', url: '#/partido', titulo: 'Hora de calentar',
-        cuerpo: 'Carrera suave y movilidad, activación y gestos del partido antes de jugar.' });
+      out.push({ clave: `calentar-${p.tipo}`, hora: restarMinutos(horaPartido, 30), min: 30, url: '#/partido',
+        titulo: `${p.actividad.titulo}: hora de calentar`,
+        cuerpo: 'De 15 a 20 minutos: carrera suave y movilidad, activación y gestos del partido. Con dolor irradiado u hormigueo no se juega.' });
+    } else if (a.partido) {
+      out.push({ clave: `partido-${p.tipo}`, hora: a.partido, min: 10, url: '#/partido', titulo: `Hoy hay ${p.actividad.titulo.toLowerCase()}`,
+        cuerpo: 'Reserva 20 minutos para el calentamiento completo. Con dolor irradiado u hormigueo no se juega.' });
     }
   } else if (a.sesion) {
-    out.push({ hora: a.sesion, tag: 'sesion', url: '#/hoy', titulo: `Hoy toca: ${p.actividad.titulo.toLowerCase()}`,
-      cuerpo: `${p.actividad.min} minutos. ${p.actividad.resumen}` });
+    out.push({ clave: `sesion-${p.tipo}`, hora: a.sesion, min: p.actividad.min, url: '#/hoy', titulo: p.actividad.titulo,
+      cuerpo: p.actividad.resumen });
   }
   if (diaSemana(fecha) === 0 && a.registro) {
-    out.push({ hora: a.registro, tag: 'registro', url: '#/registro', titulo: 'Registro de la semana',
+    out.push({ clave: 'registro', hora: a.registro, min: 10, url: '#/registro', titulo: 'Registro de la semana',
       cuerpo: 'Revisa las sesiones hechas y apunta si hubo síntomas.' });
   }
   return out.sort((x, y) => x.hora.localeCompare(y.hora));
-}
-
-/** Avisos cuyo instante cae en (desdeMs, hastaMs]. */
-export function avisosEnVentana(config, desdeMs, hastaMs) {
-  const zona = config.zonaHoraria;
-  const out = [];
-  let f = fechaEnZona(new Date(desdeMs), zona).fecha;
-  const fin = fechaEnZona(new Date(hastaMs), zona).fecha;
-  for (let i = 0; i < 4; i++) {
-    for (const av of avisosDelDia(config, f)) {
-      const t = instanteDe(f, av.hora, zona);
-      if (t > desdeMs && t <= hastaMs) out.push({ ...av, fecha: f, instante: t });
-    }
-    if (f === fin) break;
-    f = sumarDias(f, 1);
-  }
-  return out;
 }

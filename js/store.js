@@ -7,7 +7,7 @@ const VACIO = () => ({
   dias: {},            // 'YYYY-MM-DD' → { rutina, sesion, sintoma: 'no'|'local'|'irradiado', pausas, calentamiento: [] }
   crisis: null,        // { inicio, desencadenante, pasos: [bool × 6] }
   historial: [],       // [{ inicio, fin, desencadenante }]
-  ajustes: { visto: false, sonido: true, telefono: '', suscripcion: '' },
+  ajustes: { visto: false, sonido: true, telefono: '', recordatorios: {} },
 });
 
 let estado = cargar();

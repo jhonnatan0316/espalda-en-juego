@@ -280,6 +280,14 @@ h3 { font: 700 20px/1.15 var(--display); letter-spacing: .01em; }
 .medic dt { font: 700 20px/1.2 var(--display); margin-top: 14px; }
 .medic dd { font-size: 15.5px; color: var(--tinta-2); }
 
+/* Recordatorios */
+.recordatorios { border-top: 2px solid var(--tinta); margin-top: 14px; }
+.recordatorio { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--linea); }
+.recordatorio div { display: flex; flex-direction: column; min-width: 0; }
+.recordatorio strong { font: 700 21px/1.15 var(--display); letter-spacing: .01em; }
+.recordatorio span { font-size: 14.5px; color: var(--tinta-2); }
+.pie-enlace { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+
 /* Formularios y ajustes */
 .campo { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; font-weight: 700; font-size: 15.5px; }
 .campo input, .codigo {
