@@ -539,9 +539,14 @@ const ACCIONES = {
   pausa() { const f = hoy(); store.marcar(f, { pausas: (store.dia(f).pausas || 0) + 1 }); pintar(true); },
   calentar(b) { const f = hoy(); const c = (store.dia(f).calentamiento || []).slice(); c[Number(b.dataset.v)] = b.checked; store.marcar(f, { calentamiento: c }); },
   vuelta(b) { store.pasoCrisis(Number(b.dataset.v), b.checked); },
-  'crisis-on'() { store.iniciarCrisis(hoy(), document.getElementById('desencadenante').value.trim()); location.hash = '#/hoy'; pintar(); },
+  'crisis-on'() { store.iniciarCrisis(hoy(), document.getElementById('desencadenante').value.trim()); location.replace('#/hoy'); pintar(); },
   'crisis-off'() { if (confirmar(this)) { store.terminarCrisis(hoy()); aviso('Crisis guardada en el registro.'); pintar(); } },
   sonido(b) { store.ajustes({ sonido: b.checked }); },
+  salir() {
+    window.close();
+    // Si el sistema no deja cerrarla, la app sigue aquí: se avisa de cómo salir.
+    setTimeout(() => aviso('No se pudo cerrar sola. Sal con el gesto de inicio del móvil.'), 600);
+  },
   recordado(b) { store.ajustes({ recordatorios: { ...(store.ajustes().recordatorios || {}), [b.dataset.v]: true } }); setTimeout(() => pintar(true), 600); },
   'rec-hora'(t) {
     const porDefecto = semanaEditable(config, hoy(), {}).find((d) => d.dia === Number(t.dataset.dia)).recordatorios.find((r) => r.clave === t.dataset.v).hora;
@@ -563,7 +568,7 @@ const ACCIONES = {
     const a = Object.assign(document.createElement('a'), { href: url, download: `espalda-en-juego-${hoy()}.json` });
     document.body.append(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   },
-  borrar(b) { if (confirmar(b)) { store.borrar(); aviso('Registro borrado.'); location.hash = '#/hoy'; pintar(); } },
+  borrar(b) { if (confirmar(b)) { store.borrar(); aviso('Registro borrado.'); location.replace('#/hoy'); pintar(); } },
 };
 
 // Confirmación en dos toques, sin diálogos del navegador.
@@ -577,8 +582,11 @@ function confirmar(boton) {
 
 document.addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-a]');
-  if (!b || b.tagName === 'INPUT') return;
-  const fn = ACCIONES[b.dataset.a]; if (fn) fn.call(b, b);
+  if (b && b.tagName !== 'INPUT') { const fn = ACCIONES[b.dataset.a]; if (fn) fn.call(b, b); }
+  // Los enlaces internos sustituyen la página en vez de apilarla: con una sola entrada en el
+  // historial, el botón Salir puede cerrar la app y el gesto de atrás del móvil sale de ella.
+  const enlace = ev.target.closest('a[href^="#/"]');
+  if (enlace && !enlace.target) { ev.preventDefault(); location.replace(enlace.getAttribute('href')); }
 });
 document.addEventListener('change', (ev) => {
   const t = ev.target;
@@ -605,6 +613,9 @@ async function arrancar() {
     return;
   }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Salir solo tiene sentido con la web instalada: una pestaña del navegador no se deja cerrar.
+  const instalada = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  document.querySelector('.salir').hidden = !instalada;
   pintar();
 }
 arrancar();
