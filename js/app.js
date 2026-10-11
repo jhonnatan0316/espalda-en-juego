@@ -545,7 +545,10 @@ const ACCIONES = {
   salir() {
     window.close();
     // Si el sistema no deja cerrarla, la app sigue aquí: se avisa de cómo salir.
-    setTimeout(() => aviso('No se pudo cerrar sola. Sal con el gesto de inicio del móvil.'), 600);
+    const instalada = matchMedia('(display-mode: standalone)').matches;
+    setTimeout(() => aviso(instalada
+      ? 'No se pudo cerrar sola. Sal con el gesto de inicio del móvil.'
+      : 'Una pestaña del navegador no se cierra desde la web. Ciérrala tú o instala la app.'), 600);
   },
   recordado(b) { store.ajustes({ recordatorios: { ...(store.ajustes().recordatorios || {}), [b.dataset.v]: true } }); setTimeout(() => pintar(true), 600); },
   'rec-hora'(t) {
@@ -613,9 +616,13 @@ async function arrancar() {
     return;
   }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-  // Salir solo tiene sentido con la web instalada: una pestaña del navegador no se deja cerrar.
-  const instalada = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  document.querySelector('.salir').hidden = !instalada;
+  // Cuando llega una versión nueva de la web, se recarga sola una vez para mostrarla.
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (sessionStorage.getItem('recargada')) return;
+      sessionStorage.setItem('recargada', '1'); location.reload();
+    });
+  }
   pintar();
 }
 arrancar();

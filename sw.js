@@ -1,5 +1,5 @@
 // Service worker: uso sin conexión.
-const CACHE = 'eej-v8';
+const CACHE = 'eej-v9';
 const BASE = [
   './', 'index.html', 'css/styles.css', 'manifest.webmanifest', 'config.json',
   'js/app.js', 'js/data.js', 'js/schedule.js', 'js/store.js', 'js/player.js', 'js/figuras.js', 'js/recordatorios.js',
@@ -32,17 +32,22 @@ self.addEventListener('fetch', (ev) => {
     }
     return res;
   };
+  const guardado = () => caches.match(req, { ignoreSearch: true });
 
-  // La configuración, primero de la red: un cambio en GitHub llega en la siguiente apertura.
-  if (url.pathname.endsWith('config.json')) {
-    ev.respondWith(fetch(req).then(guardar).catch(() => caches.match(req, { ignoreSearch: true })));
+  // Las tipografías no cambian: primero lo guardado.
+  if (fuentes) {
+    ev.respondWith(guardado().then((hit) => hit || fetch(req).then(guardar)));
     return;
   }
-  // El resto: lo guardado al momento, y se actualiza por detrás.
-  ev.respondWith(
-    caches.match(req, { ignoreSearch: true }).then((hit) => {
-      const red = fetch(req).then(guardar).catch(() => hit);
-      return hit || red;
-    }),
-  );
+  // La web, primero de la red para que cada cambio se vea al momento.
+  // Sin conexión, o si la red tarda más de 4 segundos, se usa lo guardado.
+  ev.respondWith((async () => {
+    const red = fetch(req, { cache: 'no-cache' }).then(guardar);
+    const limite = new Promise((resolver) => setTimeout(resolver, 4000, null));
+    try {
+      const res = await Promise.race([red, limite]);
+      if (res) return res;
+    } catch { /* sin red: se sigue con lo guardado */ }
+    return (await guardado()) || red;
+  })());
 });
