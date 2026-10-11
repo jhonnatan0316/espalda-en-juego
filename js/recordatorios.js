@@ -4,15 +4,30 @@ import { DIAS, diaSemana, sumarDias, recordatoriosDelDia } from './schedule.js';
 const BYDAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 const pad = (n) => String(n).padStart(2, '0');
 
-/** Agrupa los recordatorios de una semana: [{ clave, titulo, cuerpo, hora, min, url, dias: [0-6], primera }]. */
-export function recordatoriosSemanales(config, desde) {
+/** Los siete días a partir de hoy (o del inicio del plan), con todos sus recordatorios, activos o no. */
+export function semanaEditable(config, desde, horas) {
+  const inicio = desde > config.inicio ? desde : config.inicio;
+  const dias = [];
+  for (let i = 0; i < 7; i++) {
+    const fecha = sumarDias(inicio, i);
+    dias.push({ fecha, dia: diaSemana(fecha), recordatorios: recordatoriosDelDia(config, fecha, horas, true) });
+  }
+  return dias.sort((a, b) => ((a.dia + 6) % 7) - ((b.dia + 6) % 7)); // lunes primero
+}
+
+/**
+ * Agrupa los recordatorios de una semana: [{ clave, id, titulo, cuerpo, hora, min, url, dias: [0-6], primera }].
+ * Los días que comparten recordatorio y hora forman un solo evento semanal; `id` lo identifica.
+ */
+export function recordatoriosSemanales(config, desde, horas) {
   const inicio = desde > config.inicio ? desde : config.inicio;
   const mapa = new Map();
   for (let i = 0; i < 7; i++) {
     const fecha = sumarDias(inicio, i);
-    for (const r of recordatoriosDelDia(config, fecha)) {
-      if (!mapa.has(r.clave)) mapa.set(r.clave, { ...r, dias: [], primera: fecha });
-      mapa.get(r.clave).dias.push(diaSemana(fecha));
+    for (const r of recordatoriosDelDia(config, fecha, horas)) {
+      const id = `${r.clave}@${r.hora}`;
+      if (!mapa.has(id)) mapa.set(id, { ...r, id, dias: [], primera: fecha });
+      mapa.get(id).dias.push(diaSemana(fecha));
     }
   }
   const orden = (d) => (d + 6) % 7; // lunes primero
@@ -71,7 +86,7 @@ export function ics(lista, urlApp, ahora = new Date()) {
   for (const r of lista) {
     const [ini, fin] = tramo(r);
     lineas.push(
-      'BEGIN:VEVENT', `UID:${r.clave.replace(/[^\w-]/g, '')}@espalda-en-juego`, `DTSTAMP:${sello}`,
+      'BEGIN:VEVENT', `UID:${r.id.replace(/[^\w-]/g, '')}@espalda-en-juego`, `DTSTAMP:${sello}`,
       `DTSTART:${ini}`, `DTEND:${fin}`, regla(r), `SUMMARY:${escapar(r.titulo)}`,
       `DESCRIPTION:${escapar(`${r.cuerpo}\n\n${urlApp}${r.url}`)}`,
       'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${escapar(r.titulo)}`, 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT',

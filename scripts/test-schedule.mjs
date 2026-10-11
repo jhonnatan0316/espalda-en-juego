@@ -1,7 +1,7 @@
 // Comprobaciones de la lógica del plan y de los recordatorios. Uso: npm test
 import assert from 'node:assert/strict';
 import { tipoDelDia, planDelDia, recordatoriosDelDia, faseDe, lunesDe, sumarDias, horasEntrePartidos } from '../js/schedule.js';
-import { recordatoriosSemanales, textoDias, enlaceGoogle, ics } from '../js/recordatorios.js';
+import { recordatoriosSemanales, semanaEditable, textoDias, enlaceGoogle, ics } from '../js/recordatorios.js';
 
 const base = {
   url: 'https://ejemplo.test/app/', inicio: '2026-10-12',
@@ -97,4 +97,24 @@ for (const l of archivo.split('\r\n')) assert.ok(new TextEncoder().encode(l).len
 assert.equal(new Set(archivo.match(/UID:.*/g)).size, 12);
 assert.ok(!/DESCRIPTION:[^\r]*[^\\],/.test(archivo.replace(/\r\n /g, '')), 'coma sin escapar');
 
-console.log(`Todo correcto: ${lista.length} recordatorios semanales.`);
+// Horas cambiadas en el móvil: el sábado (6) la rutina a las 10:00, y el lunes (1) sin la pausa de las 13:00.
+const horas = { 6: { rutina: { h: '10:00' } }, 1: { 'pausa-13:00': { off: true } } };
+const editada = recordatoriosSemanales(marJue, '2026-10-11', horas);
+const por = (id) => editada.find((r) => r.id === id);
+assert.deepEqual(por('rutina@08:30').dias, [1, 5, 0]);          // lunes, viernes y domingo siguen a las 08:30
+assert.deepEqual(por('rutina@10:00').dias, [6]);                // el sábado, a las 10:00
+assert.equal(por('rutina@10:00').primera, '2026-10-17');
+assert.deepEqual(por('pausa-13:00@13:00').dias, [2, 3, 4, 5]);  // el lunes ya no
+assert.equal(editada.length, 13);
+assert.equal(new Set(editada.map((r) => r.id)).size, 13);
+assert.equal(new Set(ics(editada, marJue.url).match(/UID:.*/g)).size, 13);
+// La pantalla de edición ve también los desactivados, con su hora original.
+const lunes = semanaEditable(marJue, '2026-10-11', horas).find((d) => d.dia === 1).recordatorios;
+assert.deepEqual(lunes.map((r) => `${r.clave} ${r.activo}`), ['rutina true', 'pausa-11:00 true', 'pausa-13:00 false', 'pausa-17:00 true', 'sesion-pilatesSuave true']);
+const sabado = semanaEditable(marJue, '2026-10-11', horas).find((d) => d.dia === 6).recordatorios.find((r) => r.clave === 'rutina');
+assert.deepEqual([sabado.hora, sabado.porDefecto], ['10:00', '08:30']);
+assert.equal(semanaEditable(marJue, '2026-10-11', {})[0].dia, 1); // empieza en lunes
+// Una hora mal escrita se ignora.
+assert.equal(recordatoriosSemanales(marJue, '2026-10-11', { 6: { rutina: { h: '25h' } } }).find((r) => r.clave === 'rutina').hora, '08:30');
+
+console.log(`Todo correcto: ${lista.length} recordatorios semanales, ${editada.length} con horas cambiadas.`);

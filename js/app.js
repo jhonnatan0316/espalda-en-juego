@@ -9,7 +9,7 @@ import {
 import { store, rutinasSemana, semanasSinSintomas, semanasCumplidas } from './store.js';
 import { abrirPlayer, minutosDe } from './player.js';
 import { FIGURAS, svgFigura } from './figuras.js';
-import { recordatoriosSemanales, textoDias, enlaceGoogle, ics } from './recordatorios.js';
+import { recordatoriosSemanales, semanaEditable, textoDias, enlaceGoogle, ics } from './recordatorios.js';
 
 const app = document.getElementById('app');
 let config = null;
@@ -403,35 +403,76 @@ function vistaAjustes() {
     </section>`;
 }
 
+const diasAbiertos = new Set();
+
 function vistaRecordatorios() {
-  const lista = recordatoriosSemanales(config, hoy()); const puestos = store.ajustes().recordatorios || {};
+  const horas = store.ajustes().horas || {}; const puestos = store.ajustes().recordatorios || {};
+  const lista = recordatoriosSemanales(config, hoy(), horas);
+  const hayCambios = Object.values(horas).some((d) => Object.keys(d).length);
+
+  const dias = semanaEditable(config, hoy(), horas).map(({ dia, recordatorios }) => {
+    const activos = recordatorios.filter((r) => r.activo).length;
+    const filas = recordatorios.map((r) => `
+      <li class="rec-fila ${r.activo ? '' : 'apagado'}">
+        <label class="rec-activo"><input type="checkbox" data-a="rec-activo" data-dia="${dia}" data-v="${esc(r.clave)}" ${r.activo ? 'checked' : ''}>
+          <span>${esc(r.titulo)}${r.hora !== r.porDefecto ? ` <em>antes ${esc(r.porDefecto)}</em>` : ''}</span></label>
+        <input type="time" class="rec-hora" data-a="rec-hora" data-dia="${dia}" data-v="${esc(r.clave)}" value="${esc(r.hora)}"
+          aria-label="Hora de ${esc(r.titulo)} el ${DIAS[dia]}" ${r.activo ? '' : 'disabled'}>
+      </li>`).join('');
+    return `
+      <details class="rec-dia" data-dia="${dia}" ${diasAbiertos.has(dia) ? 'open' : ''}>
+        <summary><strong>${mayus(DIAS[dia])}</strong><span>${activos === recordatorios.length ? `${activos} recordatorios` : `${activos} de ${recordatorios.length} activos`}</span></summary>
+        <ul>${filas}</ul>
+      </details>`;
+  }).join('');
+
   const filas = lista.map((r) => `
-    <li class="recordatorio ${puestos[r.clave] ? 'puesto' : ''}">
+    <li class="recordatorio ${puestos[r.id] ? 'puesto' : ''}">
       <div><strong>${esc(r.titulo)}</strong><span>${mayus(textoDias(r.dias))}, a las ${esc(r.hora)}</span></div>
-      <a class="btn btn-peq ${puestos[r.clave] ? 'btn-borde' : ''}" data-a="recordado" data-v="${esc(r.clave)}" target="_blank" rel="noopener"
-        href="${esc(enlaceGoogle(r, config.url))}">${puestos[r.clave] ? 'Añadido' : 'Añadir'}</a>
+      <a class="btn btn-peq ${puestos[r.id] ? 'btn-borde' : ''}" data-a="recordado" data-v="${esc(r.id)}" target="_blank" rel="noopener"
+        href="${esc(enlaceGoogle(r, config.url))}">${puestos[r.id] ? 'Añadido' : 'Añadir'}</a>
     </li>`).join('');
+
   return `
     <p class="volver"><a href="#/ajustes">Ajustes</a></p>
     <header class="cabecera-dia"><h1 class="titular titular-peq">Recordatorios</h1>
-      <p>El calendario del móvil avisa a la hora, cada semana, aunque la web esté cerrada. Se ponen una sola vez.</p></header>
+      <p>El calendario del móvil avisa a la hora, cada semana, aunque la web esté cerrada.</p></header>
     <section class="bloque">
-      <h2>Todos de una vez</h2>
-      <p>Descarga el archivo y ábrelo con el calendario. Trae los ${lista.length} recordatorios con su aviso a la hora exacta.</p>
-      <button class="btn" data-a="ics">Descargar los ${lista.length} recordatorios</button>
-      <p class="nota">Si el calendario del móvil no lo abre, impórtalo desde calendar.google.com en un ordenador: Configuración, Importar y exportar.</p>
+      <h2>1. Elige las horas</h2>
+      <p>Abre un día para cambiar la hora de cada recordatorio o quitar los que no quieras. Cada día puede tener horas distintas.</p>
+      <div class="rec-dias">${dias}</div>
+      ${hayCambios ? '<button class="btn-texto" data-a="rec-reset">Volver a las horas originales</button>' : ''}
+      <p class="nota">Para cambiar la hora solo una semana, hazlo en el calendario: abre ese evento, cambia la hora y elige «solo este evento».</p>
     </section>
     <section class="bloque">
-      <h2>Uno a uno</h2>
+      <h2>2. Llévalos al calendario</h2>
+      <p>Con estas horas salen ${lista.length} recordatorios semanales. Descarga el archivo y ábrelo con el calendario: trae todos con su aviso a la hora exacta.</p>
+      <button class="btn" data-a="ics">Descargar los ${lista.length} recordatorios</button>
+      <p class="nota">Si el calendario del móvil no lo abre, impórtalo desde calendar.google.com en un ordenador: Configuración, Importar y exportar.</p>
+      <h2>O uno a uno</h2>
       <p>Cada botón abre Google Calendar con el evento ya relleno y repetido cada semana. Solo hay que guardar.</p>
       <ul class="recordatorios">${filas}</ul>
       <p class="nota">Antes de guardar, revisa la notificación del evento: para que suene a la hora, elige «A la hora del evento».</p>
+      <p class="nota">Si cambias horas después de haberlos añadido, borra del calendario los antiguos y añade los nuevos: no se actualizan solos.</p>
     </section>
     <section class="bloque">
       <h2>Si prefieres la alarma del reloj</h2>
       <p>Una web no puede crear alarmas en la app Reloj de Android; hay que ponerlas a mano. Estas son las horas:</p>
       <ul class="lista">${lista.map((r) => `<li>${esc(r.hora)}, ${textoDias(r.dias)}: ${esc(r.titulo)}</li>`).join('')}</ul>
     </section>`;
+}
+
+/** Guarda un cambio de hora o de activación de un recordatorio en un día de la semana. */
+function cambiarRecordatorio(t, cambio) {
+  const dia = Number(t.dataset.dia); const clave = t.dataset.v;
+  const horas = structuredClone(store.ajustes().horas || {});
+  const actual = { ...((horas[dia] || {})[clave] || {}), ...cambio };
+  for (const k of Object.keys(actual)) if (actual[k] === undefined || actual[k] === false) delete actual[k];
+  horas[dia] = { ...(horas[dia] || {}) };
+  if (Object.keys(actual).length) horas[dia][clave] = actual; else delete horas[dia][clave];
+  if (!Object.keys(horas[dia]).length) delete horas[dia];
+  store.ajustes({ horas });
+  pintar(true);
 }
 
 /* ---------- Navegación ---------- */
@@ -502,8 +543,15 @@ const ACCIONES = {
   'crisis-off'() { if (confirmar(this)) { store.terminarCrisis(hoy()); aviso('Crisis guardada en el registro.'); pintar(); } },
   sonido(b) { store.ajustes({ sonido: b.checked }); },
   recordado(b) { store.ajustes({ recordatorios: { ...(store.ajustes().recordatorios || {}), [b.dataset.v]: true } }); setTimeout(() => pintar(true), 600); },
+  'rec-hora'(t) {
+    const porDefecto = semanaEditable(config, hoy(), {}).find((d) => d.dia === Number(t.dataset.dia)).recordatorios.find((r) => r.clave === t.dataset.v).hora;
+    if (!/^\d\d:\d\d$/.test(t.value)) return pintar(true);
+    cambiarRecordatorio(t, { h: t.value === porDefecto ? undefined : t.value });
+  },
+  'rec-activo'(t) { cambiarRecordatorio(t, { off: !t.checked }); },
+  'rec-reset'() { store.ajustes({ horas: {} }); aviso('Horas originales restauradas.'); pintar(true); },
   ics() {
-    const lista = recordatoriosSemanales(config, hoy());
+    const lista = recordatoriosSemanales(config, hoy(), store.ajustes().horas);
     const url = URL.createObjectURL(new Blob([ics(lista, config.url)], { type: 'text/calendar' }));
     const a = Object.assign(document.createElement('a'), { href: url, download: 'espalda-en-juego-recordatorios.ics' });
     document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
@@ -540,6 +588,11 @@ document.addEventListener('change', (ev) => {
   }
   if (t.dataset.a && ACCIONES[t.dataset.a]) ACCIONES[t.dataset.a].call(t, t);
 });
+// Recuerda qué días están desplegados en Recordatorios para no cerrarlos al repintar.
+document.addEventListener('toggle', (ev) => {
+  const d = ev.target; if (!d.classList || !d.classList.contains('rec-dia')) return;
+  const dia = Number(d.dataset.dia); if (d.open) diasAbiertos.add(dia); else diasAbiertos.delete(dia);
+}, true);
 window.addEventListener('hashchange', () => pintar());
 window.addEventListener('beforeinstallprompt', (ev) => { ev.preventDefault(); instalar = ev; if (config) pintar(true); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && config && document.getElementById('player').hidden) pintar(true); });

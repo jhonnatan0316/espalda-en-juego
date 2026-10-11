@@ -128,8 +128,12 @@ function restarMinutos(hora, min) {
   return `${pad(Math.floor(t / 60))}:${pad(t % 60)}`;
 }
 
-/** Recordatorios de una fecha: [{ clave, hora, min, titulo, cuerpo, url }] ordenados por hora. */
-export function recordatoriosDelDia(config, fecha) {
+/**
+ * Recordatorios de una fecha: [{ clave, hora, porDefecto, activo, min, titulo, cuerpo, url }] ordenados por hora.
+ * `horas` son los cambios hechos en el móvil: { [díaSemana]: { [clave]: { h: 'HH:MM', off: true } } }.
+ * Con `todos`, devuelve también los desactivados (para la pantalla de edición).
+ */
+export function recordatoriosDelDia(config, fecha, horas = {}, todos = false) {
   const p = planDelDia(config, fecha);
   const a = config.avisos || {};
   const out = [];
@@ -161,5 +165,12 @@ export function recordatoriosDelDia(config, fecha) {
     out.push({ clave: 'registro', hora: a.registro, min: 10, url: '#/registro', titulo: 'Registro de la semana',
       cuerpo: 'Revisa las sesiones hechas y apunta si hubo síntomas.' });
   }
-  return out.sort((x, y) => x.hora.localeCompare(y.hora));
+  const cambios = (horas || {})[diaSemana(fecha)] || {};
+  return out
+    .map((r) => {
+      const c = cambios[r.clave] || {};
+      return { ...r, porDefecto: r.hora, hora: /^\d\d:\d\d$/.test(c.h || '') ? c.h : r.hora, activo: !c.off };
+    })
+    .filter((r) => todos || r.activo)
+    .sort((x, y) => x.hora.localeCompare(y.hora) || x.clave.localeCompare(y.clave));
 }
