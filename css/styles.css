@@ -79,6 +79,7 @@ nav .nav-crisis svg { stroke: var(--roja); }
 
 /* Tipografía */
 .titular { font: 800 clamp(52px, 17vw, 84px)/.88 var(--display); letter-spacing: -.01em; text-wrap: balance; }
+.titular + p { margin-top: 16px; }
 .titular-peq { font-size: clamp(38px, 11vw, 54px); line-height: .95; }
 .cabecera-dia { padding: 18px 0 20px; }
 .cabecera-dia p { margin-top: 12px; color: var(--tinta-2); max-width: 34em; }
