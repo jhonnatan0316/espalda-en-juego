@@ -1,9 +1,9 @@
 // Service worker: uso sin conexión.
-const CACHE = 'eej-v9';
+const CACHE = 'eej-v10';
 const BASE = [
   './', 'index.html', 'css/styles.css', 'manifest.webmanifest', 'config.json',
   'js/app.js', 'js/data.js', 'js/schedule.js', 'js/store.js', 'js/player.js', 'js/figuras.js', 'js/recordatorios.js',
-  'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable.png',
+  'icons/app-192.png', 'icons/app-512.png', 'icons/app-maskable.png',
 ];
 
 self.addEventListener('install', (ev) => {
