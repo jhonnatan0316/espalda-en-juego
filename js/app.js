@@ -8,6 +8,7 @@ import {
 } from './data.js';
 import { store, rutinasSemana, semanasSinSintomas, semanasCumplidas } from './store.js';
 import { abrirPlayer, minutosDe } from './player.js';
+import { FIGURAS, svgFigura } from './figuras.js';
 
 const app = document.getElementById('app');
 let config = null;
@@ -187,14 +188,27 @@ function vistaSemana() {
     </section>`;
 }
 
+/** Tira de ilustraciones de un ejercicio; cada una se abre a pantalla completa. */
+function secuencia(id) {
+  const e = EJERCICIOS[id]; const cuadros = FIGURAS[id] || [];
+  return `<div class="secuencia">${cuadros.map((fr, i) => `
+    <button class="cuadro" data-a="ver" data-v="${id}" data-i="${i}" aria-label="Ampliar el paso ${i + 1} de ${cuadros.length}">
+      ${svgFigura(fr, esc(`${e.nombre}, paso ${i + 1}`))}
+      <span class="cuadro-n">${i + 1}</span>
+      <span class="cuadro-texto">${esc(fr.texto)}</span>
+    </button>`).join('')}</div>`;
+}
+
 function filaEjercicio(id) {
-  const e = EJERCICIOS[id];
-  return `<li><a class="ejercicio" href="#/ejercicio/${id}"><strong>${esc(e.nombre)}</strong><span>${esc(e.dosis)}</span></a></li>`;
+  const e = EJERCICIOS[id]; const fr = (FIGURAS[id] || []).at(-1);
+  return `<li><a class="ejercicio" href="#/ejercicio/${id}">
+    ${fr ? `<span class="mini">${svgFigura(fr, '')}</span>` : ''}
+    <span class="ejercicio-texto"><strong>${esc(e.nombre)}</strong><span>${esc(e.dosis)}</span></span></a></li>`;
 }
 
 function vistaEjercicios() {
   return `
-    <header class="cabecera-dia"><h1 class="titular">Ejercicios</h1><p>Cada uno con su dosis, cómo se hace y una guía en vídeo o foto.</p></header>
+    <header class="cabecera-dia"><h1 class="titular">Ejercicios</h1><p>Cada uno con su dosis, las imágenes de cada paso y un vídeo de apoyo.</p></header>
     <section class="bloque">
       <h2>Rutina diaria</h2>
       <ul class="ejercicios">${RUTINA.map(filaEjercicio).join('')}</ul>
@@ -226,10 +240,12 @@ function vistaEjercicio(id) {
     <header class="cabecera-dia"><h1 class="titular titular-peq">${esc(e.nombre)}</h1><p>${esc(e.dosis)}</p></header>
     <section class="bloque">
       <h2>Cómo se hace</h2>
+      ${secuencia(id)}
+      <p class="nota">Toca una imagen para ampliarla y pasar de una a otra.</p>
       <p>${esc(e.como)}</p>
       <h2>Para qué</h2>
       <p>${esc(e.para)}</p>
-      <h2>Guía visual</h2>
+      <h2>Si la imagen no basta</h2>
       ${enlaces(e.guias)}
       <button class="btn" data-a="practicar" data-v="${id}">Practicar con temporizador</button>
     </section>
@@ -417,6 +433,39 @@ function empezar(titulo, ids, alTerminar, finTexto) {
   abrirPlayer({ titulo, ids, finTexto, alTerminar: () => { alTerminar && alTerminar(); pintar(); }, alSalir: () => pintar(true) });
 }
 
+/* ---------- Visor de ilustraciones ---------- */
+
+function abrirVisor(id, indice) {
+  const e = EJERCICIOS[id]; const cuadros = FIGURAS[id]; const visor = document.getElementById('visor');
+  visor.innerHTML = `
+    <div class="visor-cab"><strong>${esc(e.nombre)}</strong><span class="visor-n"></span>
+      <button class="visor-cerrar" data-vz="cerrar" aria-label="Cerrar">Cerrar</button></div>
+    <div class="visor-pista">${cuadros.map((fr, i) => `
+      <figure class="visor-paso">${svgFigura(fr, esc(`${e.nombre}, paso ${i + 1}`))}
+        <figcaption><span class="cuadro-n">${i + 1}</span>${esc(fr.texto)}</figcaption></figure>`).join('')}</div>
+    <div class="visor-pie"><button class="btn btn-borde" data-vz="antes">Anterior</button><button class="btn" data-vz="despues">Siguiente</button></div>
+    <p class="visor-videos">${e.guias.map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join('')}</p>`;
+  const pista = visor.querySelector('.visor-pista'); const n = visor.querySelector('.visor-n');
+  const actual = () => Math.round(pista.scrollLeft / pista.clientWidth);
+  const ir = (i) => pista.scrollTo({ left: Math.max(0, Math.min(cuadros.length - 1, i)) * pista.clientWidth, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  const pintarN = () => {
+    const i = actual(); n.textContent = `${i + 1} de ${cuadros.length}`;
+    visor.querySelector('[data-vz="antes"]').disabled = i === 0;
+    visor.querySelector('[data-vz="despues"]').disabled = i === cuadros.length - 1;
+  };
+  const cerrar = () => { visor.hidden = true; visor.innerHTML = ''; document.body.classList.remove('con-player'); document.removeEventListener('keydown', tecla); };
+  const tecla = (ev) => { if (ev.key === 'Escape') cerrar(); if (ev.key === 'ArrowRight') ir(actual() + 1); if (ev.key === 'ArrowLeft') ir(actual() - 1); };
+  visor.onclick = (ev) => {
+    const b = ev.target.closest('[data-vz]'); if (!b) return;
+    if (b.dataset.vz === 'cerrar') cerrar(); else ir(actual() + (b.dataset.vz === 'despues' ? 1 : -1));
+  };
+  pista.addEventListener('scroll', pintarN, { passive: true });
+  document.addEventListener('keydown', tecla);
+  visor.hidden = false; document.body.classList.add('con-player');
+  pista.scrollLeft = indice * pista.clientWidth; pintarN();
+  visor.querySelector('.visor-cerrar').focus();
+}
+
 /* ---------- Avisos ---------- */
 
 function claveBinaria(base64) {
@@ -450,6 +499,7 @@ const ACCIONES = {
   rutina() { const f = hoy(); empezar('Rutina diaria', RUTINA, () => store.marcar(f, { rutina: true }), 'Queda apuntada en el registro de hoy.'); },
   fuerza(b) { const f = hoy(); const cual = b.dataset.v; const toca = tipoDelDia(config, f) === `fuerza${cual}`; empezar(`Fuerza ${cual}`, FUERZA[cual], () => { if (toca) store.marcar(f, { sesion: true }); }, toca ? 'Queda apuntada en el registro de hoy.' : ''); },
   practicar(b) { empezar(EJERCICIOS[b.dataset.v].nombre, [b.dataset.v]); },
+  ver(b) { abrirVisor(b.dataset.v, Number(b.dataset.i)); },
   sesion() { const f = hoy(); store.marcar(f, { sesion: !store.dia(f).sesion }); pintar(true); },
   pausa() { const f = hoy(); store.marcar(f, { pausas: (store.dia(f).pausas || 0) + 1 }); pintar(true); },
   calentar(b) { const f = hoy(); const c = (store.dia(f).calentamiento || []).slice(); c[Number(b.dataset.v)] = b.checked; store.marcar(f, { calentamiento: c }); },

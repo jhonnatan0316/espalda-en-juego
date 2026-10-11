@@ -1,6 +1,7 @@
 // Temporizador guiado: recorre los pasos de uno o varios ejercicios.
 import { EJERCICIOS } from './data.js';
 import { store } from './store.js';
+import { FIGURAS, svgFigura } from './figuras.js';
 
 const LADOS = ['Lado izquierdo', 'Lado derecho'];
 const CIRC = 2 * Math.PI * 130;
@@ -115,6 +116,7 @@ export function abrirPlayer(op) {
         <div class="pl-centro pl-intro">
           ${cabecera}
           <p class="pl-dosis">${esc(e.dosis)}</p>
+          <div class="pl-figuras">${(FIGURAS[p.id] || []).map((fr, k) => `<span>${svgFigura(fr, esc(`${e.nombre}, paso ${k + 1}`))}</span>`).join('')}</div>
           <p class="pl-como">${esc(e.como)}</p>
           <p class="pl-guias">${e.guias.map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join('')}</p>
           <button class="btn btn-claro" data-pl="saltar">Empezar</button>

@@ -178,10 +178,65 @@ h3 { font: 700 20px/1.15 var(--display); letter-spacing: .01em; }
 .cond span { font-size: 14.5px; color: var(--tinta-2); }
 .cond.no .marca { border-style: dashed; }
 
+/* Ilustraciones de los ejercicios */
+.figura { display: block; width: 100%; height: auto; color: var(--tinta); }
+.fg-cerca, .fg-lejos, .fg-tronco, .fg-obj, .fg-flecha, .fg-suelo, .fg-halo { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fg-cerca, .fg-lejos { stroke: currentColor; stroke-width: 7; }
+.fg-lejos { opacity: .36; }
+.fg-halo { stroke: var(--fg-fondo, var(--superficie)); stroke-width: 11.5; }
+.fg-tronco { stroke: currentColor; stroke-width: 10; }
+.fg-cabeza, .fg-pesa { fill: currentColor; }
+.fg-suelo { stroke: var(--linea); stroke-width: 2; }
+.fg-obj { stroke: var(--tinta-2); stroke-width: 4; }
+.fg-palo { stroke: #B7791F; stroke-width: 3.5; }
+.fg-goma { stroke: var(--roja); stroke-width: 3.5; }
+.fg-flecha { stroke: var(--acento); stroke-width: 3.5; }
+
+.secuencia { display: flex; gap: 10px; margin: 0 -20px; padding: 2px 20px 6px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.secuencia::-webkit-scrollbar { display: none; }
+.cuadro {
+  position: relative; flex: 0 0 78%; max-width: 330px; scroll-snap-align: center; display: flex; flex-direction: column; gap: 8px;
+  padding: 12px; text-align: left; font: inherit; color: var(--tinta); cursor: pointer;
+  background: var(--superficie); border: 2px solid var(--linea); border-radius: 6px;
+}
+.cuadro-n {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 50%;
+  background: var(--tinta); color: var(--fondo); font: 800 18px/1 var(--display);
+}
+.cuadro > .cuadro-n { position: absolute; top: 10px; left: 10px; }
+.cuadro-texto { font-size: 14.5px; line-height: 1.35; color: var(--tinta-2); }
+
+#visor { position: fixed; inset: 0; z-index: 45; display: flex; flex-direction: column; background: var(--fondo); padding: calc(12px + env(safe-area-inset-top)) 0 calc(14px + env(safe-area-inset-bottom)); }
+#visor[hidden] { display: none; }
+.visor-cab { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 0 20px 10px; }
+.visor-cab strong { font: 700 22px/1.1 var(--display); letter-spacing: .01em; }
+.visor-n { font-size: 15px; color: var(--tinta-2); white-space: nowrap; }
+.visor-cerrar { min-height: 44px; padding: 0 14px; background: none; border: 2px solid var(--tinta); border-radius: 4px; color: var(--tinta); font: 700 15px/1 var(--texto); cursor: pointer; }
+.visor-pista { flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; min-height: 0; }
+.visor-pista::-webkit-scrollbar { display: none; }
+.visor-paso { flex: 0 0 100%; scroll-snap-align: center; margin: 0; padding: 0 20px; display: flex; flex-direction: column; justify-content: center; gap: 14px; max-width: 100vw; }
+.visor-paso .figura { max-height: 52vh; width: 100%; background: var(--superficie); border: 2px solid var(--linea); border-radius: 6px; padding: 8px; }
+.visor-paso figcaption { display: grid; grid-template-columns: 28px 1fr; gap: 12px; font-size: 18px; line-height: 1.4; }
+.visor-pie { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 20px 0; }
+.visor-pie .btn:disabled { opacity: .35; cursor: default; }
+.visor-videos { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 12px 20px 0; font-size: 15px; }
+.visor-videos a { font-weight: 700; text-underline-offset: 3px; }
+
+.pl-figuras { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 150px); justify-content: center; gap: 10px; width: 100%; }
+.pl-figuras span { background: rgba(0, 0, 0, .2); border: 1.5px solid rgba(255, 255, 255, .35); border-radius: 6px; padding: 4px; }
+#player .figura { color: #fff; --fg-fondo: #124A31; }
+#player .fg-flecha { stroke: var(--amarilla); }
+#player .fg-suelo { stroke: rgba(255, 255, 255, .4); }
+#player .fg-obj { stroke: #DCEBE0; }
+#player .fg-palo { stroke: #F3C56B; }
+#player .fg-goma { stroke: #FF9AA9; }
+
 /* Ejercicios */
 .ejercicios { border-top: 2px solid var(--tinta); }
-.ejercicio { display: flex; flex-direction: column; padding: 12px 22px 12px 0; border-bottom: 1px solid var(--linea); color: var(--tinta); text-decoration: none; position: relative; }
+.ejercicio { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 12px; padding: 10px 22px 10px 0; border-bottom: 1px solid var(--linea); color: var(--tinta); text-decoration: none; position: relative; }
 .ejercicio::after { content: "›"; position: absolute; right: 2px; top: 50%; translate: 0 -55%; font-size: 26px; color: var(--tinta-2); }
+.mini { background: var(--superficie); border: 1.5px solid var(--linea); border-radius: 5px; padding: 2px; }
+.ejercicio-texto { display: flex; flex-direction: column; min-width: 0; }
 .ejercicio strong { font: 700 21px/1.15 var(--display); letter-spacing: .01em; }
 .ejercicio span { font-size: 14.5px; color: var(--tinta-2); }
 .guias { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; }
