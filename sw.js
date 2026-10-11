@@ -1,5 +1,5 @@
 // Service worker: uso sin conexión.
-const CACHE = 'eej-v10';
+const CACHE = 'eej-v11';
 const BASE = [
   './', 'index.html', 'css/styles.css', 'manifest.webmanifest', 'config.json',
   'js/app.js', 'js/data.js', 'js/schedule.js', 'js/store.js', 'js/player.js', 'js/figuras.js', 'js/recordatorios.js',

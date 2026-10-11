@@ -561,14 +561,14 @@ const ACCIONES = {
   ics() {
     const lista = recordatoriosSemanales(config, hoy(), store.ajustes().horas);
     const url = URL.createObjectURL(new Blob([ics(lista, config.url)], { type: 'text/calendar' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: 'espalda-en-juego-recordatorios.ics' });
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'core-11-recordatorios.ics' });
     document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
     aviso('Archivo descargado. Ábrelo con el calendario.');
   },
   async instalar() { if (!instalar) return; instalar.prompt(); await instalar.userChoice; instalar = null; pintar(true); },
   exportar() {
     const url = URL.createObjectURL(new Blob([store.exportar()], { type: 'application/json' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: `espalda-en-juego-${hoy()}.json` });
+    const a = Object.assign(document.createElement('a'), { href: url, download: `core-11-${hoy()}.json` });
     document.body.append(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   },
   borrar(b) { if (confirmar(b)) { store.borrar(); aviso('Registro borrado.'); location.replace('#/hoy'); pintar(); } },

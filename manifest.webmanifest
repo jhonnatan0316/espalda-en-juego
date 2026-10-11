@@ -1,7 +1,7 @@
 {
-  "name": "Espalda en juego",
-  "short_name": "Espalda",
-  "description": "Plan de ejercicios de espalda para seguir jugando al fútbol.",
+  "name": "Core 11",
+  "short_name": "Core 11",
+  "description": "Rutina diaria, fuerza y día de partido para seguir jugando al fútbol.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

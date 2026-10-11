@@ -1,4 +1,4 @@
-# Espalda en juego
+# Core 11
 
 Web instalable con el plan de ejercicios de espalda para seguir jugando al fútbol: qué toca cada día, temporizador guiado, ilustraciones y vídeos de cada ejercicio, registro de síntomas, modo crisis y recordatorios para el calendario del móvil.
 

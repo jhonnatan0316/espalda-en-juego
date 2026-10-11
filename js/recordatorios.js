@@ -82,7 +82,7 @@ function plegar(linea) {
 /** Archivo .ics con todos los recordatorios, cada uno con su aviso a la hora. */
 export function ics(lista, urlApp, ahora = new Date()) {
   const sello = `${ahora.toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`;
-  const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Espalda en juego//Recordatorios//ES', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Espalda en juego'];
+  const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Core 11//Recordatorios//ES', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Core 11'];
   for (const r of lista) {
     const [ini, fin] = tramo(r);
     lineas.push(
